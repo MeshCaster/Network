@@ -1,5 +1,5 @@
 using Core.Domain.Enums;
-using Core.Domain.ValueObjects;
+using NetTopologySuite.Geometries;
 
 namespace Core.Domain.Entities;
 
@@ -14,7 +14,7 @@ public class Node
     public NodeStatus Status { get; set; }
     
     // Geospatial location
-    public Location Location { get; set; } = null!;
+    public Point Location { get; set; } = null!;
     
     // Network properties
     public double SignalStrength { get; set; } // 0-100
