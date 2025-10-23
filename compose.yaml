@@ -1,0 +1,102 @@
+﻿services:
+  core.api:
+    image: core.api
+    build:
+      context: .
+      dockerfile: Core.Api/Dockerfile
+
+  core.api-1:
+    image: core.api-1
+    build:
+      context: .
+      dockerfile: Core.Api/Dockerfile
+
+  # PostgreSQL Database with PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: meshnetwork-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: meshnetwork
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meshnetwork
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: meshnetwork-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meshnetwork
+
+  # MQTT Broker (Eclipse Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: meshnetwork-mqtt
+    ports:
+      - "1883:1883"  # MQTT
+      - "8883:8883"  # MQTT over TLS
+      - "9001:9001"  # WebSocket
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+      - mqtt_data:/mosquitto/data
+    networks:
+      - meshnetwork
+
+  # pgAdmin - Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: meshnetwork-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@meshnetwork.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - meshnetwork
+
+  # Redis Commander - Redis Management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: meshnetwork-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - meshnetwork
+
+networks:
+  meshnetwork:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  mqtt_data:
